@@ -1,1 +1,33 @@
-
+{
+  "GameSettings": {
+    "Version": "1.0.0",
+    "DeltaCompatible": true,
+    "MobileOptimized": true
+  },
+  "UI": {
+    "Theme": "Dark",
+    "Transparency": 0.5
+  },
+  "Tools": {
+    "Scooper": { "CollectRate": 1.0, "Cooldown": 0.5 },
+    "Rake": { "CollectRate": 1.2, "Cooldown": 0.6 },
+    "Clippers": { "CollectRate": 1.5, "Cooldown": 0.7 }
+  },
+  "Mobs": {
+    "Ladybug": { "HP": 50, "Level": 1, "RespawnTime": 60 },
+    "Rhino": { "HP": 100, "Level": 2, "RespawnTime": 120 },
+    "Spider": { "HP": 300, "Level": 3, "RespawnTime": 300 },
+    "CoconutCrab": { "HP": 250000, "Level": 12, "RespawnTime": 3600 },
+    "StumpSnail": { "HP": 30000000, "Level": 6, "RespawnTime": 345600 }
+  },
+  "Quests": {
+    "BlackBear": {
+      "Quest1": { "Requirements": { "Pollen": 1000 }, "Reward": 500 },
+      "Quest2": { "Requirements": { "RedPollen": 500 }, "Reward": 600 }
+    }
+  },
+  "Inventory": {
+    "MicroConverter": { "Limit": 15, "UseThreshold": 0.9 },
+    "InstantConverter": { "Limit": 5, "UseThreshold": 0.95 }
+  }
+}
