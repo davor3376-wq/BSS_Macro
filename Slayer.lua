@@ -65,6 +65,11 @@ end
 
 -- [JSON Ref]: BSS_Coordinates.json (Special Locations -> Commando Chick)
 function Slayer:CombatLoop()
+    -- Agent 141: Handshake
+    if not self.Base.State.isCombatEnabled then
+        return
+    end
+
     if not self.ActiveTarget then return end
 
     -- Agent 191: Re-verify target stats exist before engaging

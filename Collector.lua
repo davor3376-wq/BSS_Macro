@@ -61,23 +61,35 @@ function Collector:StartCollection(toolName)
     print("[Agent 056]: Starting collection with " .. toolName .. " (Rate: " .. toolData.CollectRate .. ")")
 
     -- Simulation Loop wrapped in pcall (Agent 191 Requirement)
-    spawn(function()
+    -- Agent 191: Using task.spawn for better thread management and connection tracking
+    task.spawn(function()
         local success, err = pcall(function()
-            while self.IsCollecting do
-                -- Simulate Click (Placeholder)
+            -- Agent 141: Handshake with BaseClass State
+            while self.Base.State.isFarming and not self.Base.State.isConverting do
+                -- Simulate Click
                 -- game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
-                wait(toolData.Cooldown)
+
+                -- Simulate Pollen Check (In real usage, this reads Player.CoreStats.Pollen)
+                local currentPollen = math.random(0, 20) -- Dummy value
+                if self:CheckCapacity(currentPollen) then
+                     self.Base.State.isConverting = true -- Signal Navigator to stop
+                     self:InitiateConversion()
+                     break -- Exit loop to handle conversion
+                end
+
+                task.wait(toolData.Cooldown)
             end
         end)
 
         if not success then
             warn("[Agent 056]: Collection Loop Crashed: " .. tostring(err))
-            self.IsCollecting = false
+            self.Base.State.isFarming = false
         end
     end)
 end
 
 function Collector:StopCollection()
+    self.Base.State.isFarming = false
     self.IsCollecting = false
     print("[Agent 056]: Collection stopped.")
 end
@@ -94,6 +106,20 @@ function Collector:CheckCapacity(currentPollen)
         return true
     end
     return false
+end
+
+function Collector:InitiateConversion()
+    print("[Agent 056]: Starting Honey Conversion at Hive...")
+    -- Trigger Navigator Return
+    -- In real logic, this would call Navigator:ReturnToHive() via a Controller or direct reference if linked
+    -- Here we simulate the wait
+    task.wait(5)
+    print("[Agent 056]: Conversion Complete.")
+    self.Base.State.isConverting = false
+    -- Restart farming if still enabled
+    if self.Base.State.isFarming then
+        -- self:StartCollection(...) -- Recursion or loop restart handled by Controller
+    end
 end
 
 return Collector

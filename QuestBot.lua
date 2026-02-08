@@ -111,6 +111,15 @@ end
 
 -- [JSON Ref]: BSS_Coordinates.json (Special Locations -> NPC)
 function QuestBot:GoToNPC(npcName)
+    -- Agent 141: Handshake
+    if not self.Base.State.isQuesting then return end
+
+    -- Agent 141: Pause Farming during Quest Turn-in
+    if self.Base.State.isFarming then
+        print("[Agent 141]: Pausing Farm for Quest Turn-in...")
+        self.Base.State.isFarming = false
+    end
+
     -- Agent 191: Defensive check
     if not npcName or type(npcName) ~= "string" then return end
 

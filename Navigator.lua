@@ -57,6 +57,12 @@ end
 
 -- [JSON Ref]: BSS_Coordinates.json (Fields)
 function Navigator:MoveToField(fieldName)
+    -- Agent 141: Handshake - Check if busy converting
+    if self.Base.State.isConverting then
+        print("[Agent 021]: Pausing movement. Collector is full/converting.")
+        return false
+    end
+
     -- Agent 191: Safety Check for Character existence
     if not Character or not Character.Parent or not HumanoidRootPart then
         warn("[Agent 021]: Character not ready for movement.")
@@ -64,8 +70,6 @@ function Navigator:MoveToField(fieldName)
         HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
         return false
     end
-
-    print("[Agent 021]: Calculating path to " .. fieldName)
 
     -- Agent 002 provides the coordinates via BaseClass (which uses pcall internally)
     local targetPos = self.Base:GetFieldPosition(fieldName)
@@ -75,7 +79,10 @@ function Navigator:MoveToField(fieldName)
         return false
     end
 
-    -- Agent 191: Wrap critical movement logic in pcall
+    print("[Agent 021]: Calculating path to " .. fieldName)
+    self.Base.State.activeField = fieldName -- Update State
+
+    -- Agent 191: Wrap critical movement logic in pcall & Register Tween
     local success, err = pcall(function()
         local distance = (HumanoidRootPart.Position - targetPos).Magnitude
         local speed = 60 -- Default safe speed
@@ -89,8 +96,14 @@ function Navigator:MoveToField(fieldName)
         local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Linear)
         local tween = TweenService:Create(HumanoidRootPart, tweenInfo, {CFrame = CFrame.new(targetPos)})
 
+        -- Agent 191: Register connection to allow cancellation
+        self.Base:RegisterConnection("ActiveTween", tween.Completed:Connect(function()
+            -- Tween done, cleanup happens naturally
+        end))
+
         tween:Play()
         tween.Completed:Wait()
+        self.Base:ClearConnection("ActiveTween") -- Cleanup immediately after
     end)
 
     if success then
@@ -98,6 +111,7 @@ function Navigator:MoveToField(fieldName)
         return true
     else
         warn("[Agent 021]: Movement Failed! Error: " .. tostring(err))
+        self.Base:ClearConnection("ActiveTween")
         return false
     end
 end

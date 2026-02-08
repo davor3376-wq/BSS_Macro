@@ -48,10 +48,49 @@ BaseClass.Cache = {
     Coordinates = nil
 }
 
+-- [State Management]: Agent 141 (Strategist)
+-- Centralized state allows modules to handshake (Navigator <> Collector <> Slayer)
+BaseClass.State = {
+    isFarming = false,       -- Controlled by UI Tab 1
+    isConverting = false,    -- Controlled by Collector
+    isCombatEnabled = false, -- Controlled by UI Tab 2
+    isQuesting = false,      -- Controlled by UI Tab 3
+    activeField = nil,       -- Current target field
+    activeMob = nil,         -- Current target mob
+}
+
+-- [Memory Monitor]: Agent 191 (Warden)
+-- Stores all RBXScriptConnections to prevent memory leaks
+BaseClass.Connections = {}
+
 function BaseClass.new()
     local self = setmetatable({}, BaseClass)
     self:LoadManifest()
     return self
+end
+
+-- [Memory]: Agent 191 - Connection Management
+function BaseClass:RegisterConnection(key, connection)
+    if self.Connections[key] then
+        self.Connections[key]:Disconnect()
+        self.Connections[key] = nil
+    end
+    self.Connections[key] = connection
+end
+
+function BaseClass:ClearConnection(key)
+    if self.Connections[key] then
+        self.Connections[key]:Disconnect()
+        self.Connections[key] = nil
+    end
+end
+
+function BaseClass:ClearAllConnections()
+    for key, connection in pairs(self.Connections) do
+        if connection then connection:Disconnect() end
+        self.Connections[key] = nil
+    end
+    print("[Agent 191]: Memory Cleaned. All connections severed.")
 end
 
 -- [JSON Ref]: Aegis_Ultimate_Manifest.json (Root)
