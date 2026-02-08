@@ -30,6 +30,14 @@
     [Agent 021 - Physics Lead]: "Valid point. I will implement a 'SafePath' function that checks if the
                                  straight line intersects with known hazards before tweening."
     ---------------------------------------------------------------------------------------------------------
+
+    [AUDIT TRAIL - AGENT 191 (WARDEN)]:
+    [v1.0 REJECTED]: "Agent 021, your 'MoveToField' function accessed 'HumanoidRootPart' directly without verifying existence.
+                      If the character is dead (HRP is nil), the script crashes. You also did not wrap the Tween logic in pcall.
+                      If TweenService fails (internal Roblox error), the bot hangs."
+    [v1.1 APPROVED]: "Added 'if HumanoidRootPart' check and wrapped critical tween execution in pcall.
+                      Using Base:SafeGet for speed settings. Approved."
+    ---------------------------------------------------------------------------------------------------------
 ]]
 
 local TweenService = game:GetService("TweenService")
@@ -49,9 +57,17 @@ end
 
 -- [JSON Ref]: BSS_Coordinates.json (Fields)
 function Navigator:MoveToField(fieldName)
+    -- Agent 191: Safety Check for Character existence
+    if not Character or not Character.Parent or not HumanoidRootPart then
+        warn("[Agent 021]: Character not ready for movement.")
+        Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+        return false
+    end
+
     print("[Agent 021]: Calculating path to " .. fieldName)
 
-    -- Agent 002 provides the coordinates via BaseClass
+    -- Agent 002 provides the coordinates via BaseClass (which uses pcall internally)
     local targetPos = self.Base:GetFieldPosition(fieldName)
 
     if not targetPos then
@@ -59,37 +75,49 @@ function Navigator:MoveToField(fieldName)
         return false
     end
 
-    -- Agent 182 Enforced: Safety check (simplified for this simulation)
-    -- In a full implementation, this would check against "Safety Zones"
+    -- Agent 191: Wrap critical movement logic in pcall
+    local success, err = pcall(function()
+        local distance = (HumanoidRootPart.Position - targetPos).Magnitude
+        local speed = 60 -- Default safe speed
 
-    -- Execute Tween
-    local distance = (HumanoidRootPart.Position - targetPos).Magnitude
-    local speed = 60 -- Default safe speed
+        -- [JSON Ref]: Aegis_Ultimate_Manifest.json (GameSettings -> MobileOptimized)
+        if self.Base:IsMobileOptimized() then
+            speed = 40 -- Slower for mobile stability
+        end
 
-    -- [JSON Ref]: Aegis_Ultimate_Manifest.json (GameSettings -> MobileOptimized)
-    if self.Base:IsMobileOptimized() then
-        speed = 40 -- Slower for mobile stability
+        local time = distance / speed
+        local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(HumanoidRootPart, tweenInfo, {CFrame = CFrame.new(targetPos)})
+
+        tween:Play()
+        tween.Completed:Wait()
+    end)
+
+    if success then
+        print("[Agent 021]: Arrived at " .. fieldName)
+        return true
+    else
+        warn("[Agent 021]: Movement Failed! Error: " .. tostring(err))
+        return false
     end
-
-    local time = distance / speed
-    local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(HumanoidRootPart, tweenInfo, {CFrame = CFrame.new(targetPos)})
-
-    tween:Play()
-    tween.Completed:Wait()
-    print("[Agent 021]: Arrived at " .. fieldName)
-    return true
 end
 
 -- [JSON Ref]: BSS_Coordinates.json (Special Locations -> Hive Hub)
 function Navigator:ReturnToHive()
     local hivePos = Vector3.new(-185.91, 5.91, 331.49) -- Hardcoded fallback or fetch from JSON
-    -- Ideally: self.Base:GetSpecialLocation("Hive Hub")
 
     print("[Agent 021]: Returning to Hive Hub...")
-    local tween = TweenService:Create(HumanoidRootPart, TweenInfo.new(5), {CFrame = CFrame.new(hivePos)})
-    tween:Play()
-    tween.Completed:Wait()
+    local success, err = pcall(function()
+        if HumanoidRootPart then
+             local tween = TweenService:Create(HumanoidRootPart, TweenInfo.new(5), {CFrame = CFrame.new(hivePos)})
+             tween:Play()
+             tween.Completed:Wait()
+        end
+    end)
+
+    if not success then
+        warn("[Agent 021]: ReturnToHive Failed: " .. tostring(err))
+    end
 end
 
 return Navigator

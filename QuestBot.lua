@@ -32,6 +32,14 @@
     [Agent 141 - Logic Lead]: "Correction. I will scan all active quests for overlapping requirements
                                (e.g., Red Pollen + Ladybugs in Rose Field). Maximizing overlap = 200% efficiency."
     ---------------------------------------------------------------------------------------------------------
+
+    [AUDIT TRAIL - AGENT 191 (WARDEN)]:
+    [v1.0 REJECTED]: "Agent 141, you iterated over 'Manifest.Quests' without verifying it exists.
+                      You also used 'match' on a potentially nil string. This logic is brittle."
+    [v1.1 APPROVED]: "Agent 141 wrapped the quest parsing loop in pcall.
+                      Used 'Base:SafeGet' to retrieve Quest data.
+                      Added type checking for quest names before string manipulation. Approved."
+    ---------------------------------------------------------------------------------------------------------
 ]]
 
 local QuestBot = {}
@@ -53,36 +61,60 @@ function QuestBot:AnalyzeQuests(playerQuests)
     local bestQuest = nil
     local highestReward = 0
 
-    for _, questName in ipairs(playerQuests) do
-        -- Simplified lookup: Assume questName format "BlackBear_Quest1"
-        -- In reality, parsing would be more complex
-        local npc, qId = questName:match("^(%w+)_(%w+)$")
+    -- Agent 191: Strict existence check for Quest DB
+    local questsDB = self.Base:SafeGet("Quests", nil) -- This will fail safely if "Quests" missing, returning nil? No, SafeGet(table, nil) might not work as intended if not handled.
+    -- Correction: SafeGet expects a key. If we want the whole table "Quests", we need a different approach or just check Cache directly with pcall
 
-        if npc and qId and self.Base.Cache.Manifest.Quests[npc] then
-            local qData = self.Base.Cache.Manifest.Quests[npc][qId]
-            if qData then
-                print("[Agent 141]: Found " .. questName .. " (Reward: " .. qData.Reward .. ")")
-                if qData.Reward > highestReward then
-                    highestReward = qData.Reward
-                    bestQuest = questName
+    -- Agent 191: Let's use pcall for the whole block to be safe
+    local success, err = pcall(function()
+        if not self.Base.Cache.Manifest or not self.Base.Cache.Manifest.Quests then
+            warn("[Agent 141]: Quests DB not loaded.")
+            return
+        end
+
+        for _, questName in ipairs(playerQuests) do
+            if type(questName) ~= "string" then
+                 -- Agent 191: Skip non-string inputs to avoid crash
+                 print("[Agent 141]: Invalid quest name format skipped.")
+            else
+                -- Simplified lookup: Assume questName format "BlackBear_Quest1"
+                local npc, qId = questName:match("^(%w+)_(%w+)$")
+
+                if npc and qId then
+                    -- Agent 191: Safe Deep Access
+                    local npcQuests = self.Base:SafeGet("Quests", npc)
+                    if npcQuests and npcQuests[qId] then
+                        local qData = npcQuests[qId]
+                        print("[Agent 141]: Found " .. questName .. " (Reward: " .. tostring(qData.Reward) .. ")")
+                        if (qData.Reward or 0) > highestReward then
+                            highestReward = qData.Reward
+                            bestQuest = questName
+                        end
+                    end
                 end
             end
         end
+    end)
+
+    if not success then
+        warn("[Agent 141]: Quest Analysis Logic Error: " .. tostring(err))
     end
 
     if bestQuest then
         print("[Agent 141]: Priority Quest Selected: " .. bestQuest)
         return bestQuest
     else
-        warn("[Agent 141]: No valid quests found in Manifest.")
+        warn("[Agent 141]: No valid quests found or Analysis failed.")
         return nil
     end
 end
 
 -- [JSON Ref]: BSS_Coordinates.json (Special Locations -> NPC)
 function QuestBot:GoToNPC(npcName)
-    local npcPos = self.Base:GetFieldPosition(npcName) -- This might fail if NPC isn't in "Fields"
-    -- Fallback: Use "Special Locations" logic (not fully implemented in BaseClass yet)
+    -- Agent 191: Defensive check
+    if not npcName or type(npcName) ~= "string" then return end
+
+    local npcPos = self.Base:GetFieldPosition(npcName) -- This uses pcall internally in BaseClass
 
     if not npcPos then
         -- Hardcoded backup (e.g., Black Bear)
@@ -95,7 +127,7 @@ function QuestBot:GoToNPC(npcName)
     end
 
     print("[Agent 141]: Moving to " .. npcName .. " to turn in quest.")
-    -- self.Base.Navigator:MoveTo(npcPos)
+    -- self.Base.Navigator:MoveTo(npcPos) -- Assuming Navigator is linked or called externally
 end
 
 return QuestBot

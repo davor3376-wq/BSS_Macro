@@ -100,10 +100,24 @@ end
 
 -- [JSON Ref]: Aegis_Ultimate_Manifest.json (GameSettings)
 function BaseClass:IsMobileOptimized()
-    if self.Cache.Manifest and self.Cache.Manifest.GameSettings then
-        return self.Cache.Manifest.GameSettings.MobileOptimized
+    return self:SafeGet("GameSettings", "MobileOptimized") or false
+end
+
+-- [Helper]: Agent 191 - Defensive Coding Standard
+-- Purpose: Safely retrieve deep nested keys without crashing
+function BaseClass:SafeGet(tableName, key)
+    local success, value = pcall(function()
+        if not self.Cache.Manifest then return nil end
+        if not self.Cache.Manifest[tableName] then return nil end
+        return self.Cache.Manifest[tableName][key]
+    end)
+
+    if success then
+        return value
+    else
+        warn("[Agent 002]: SafeGet Failed for " .. tostring(tableName) .. "." .. tostring(key))
+        return nil
     end
-    return false -- Default safe
 end
 
 return BaseClass

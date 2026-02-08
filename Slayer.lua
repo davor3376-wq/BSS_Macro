@@ -27,6 +27,15 @@
 
     [Agent 101 - Combat Lead]: "Accepted. I will query 'Mob HP' from the Manifest first to gauge difficulty."
     ---------------------------------------------------------------------------------------------------------
+
+    [AUDIT TRAIL - AGENT 191 (WARDEN)]:
+    [v1.0 REJECTED]: "Agent 101, you attempted to read 'Manifest.Mobs[mobName]' directly.
+                      If 'Mobs' table is missing from JSON, or if 'mobName' is nil, the script crashes.
+                      Combat logic is high-frequency; a crash here freezes the entire bot."
+    [v1.1 APPROVED]: "Agent 101 implemented 'Base:SafeGet' for mob stats retrieval.
+                      Added 'if not self.ActiveTarget' check in combat loop.
+                      Wrapped strafing logic in pcall. Approved."
+    ---------------------------------------------------------------------------------------------------------
 ]]
 
 local Slayer = {}
@@ -41,14 +50,15 @@ end
 
 -- [JSON Ref]: Aegis_Ultimate_Manifest.json (Mobs)
 function Slayer:IdentifyTarget(mobName)
-    local mobStats = self.Base.Cache.Manifest.Mobs[mobName]
+    -- Agent 191: Safe Access via Helper
+    local mobStats = self.Base:SafeGet("Mobs", mobName)
 
     if not mobStats then
         warn("[Agent 101]: Unknown mob type: " .. tostring(mobName))
         return nil
     end
 
-    print("[Agent 101]: Targeted " .. mobName .. " (HP: " .. mobStats.HP .. ", Level: " .. mobStats.Level .. ")")
+    print("[Agent 101]: Targeted " .. mobName .. " (HP: " .. tostring(mobStats.HP) .. ", Level: " .. tostring(mobStats.Level) .. ")")
     self.ActiveTarget = mobName
     return mobStats
 end
@@ -57,21 +67,35 @@ end
 function Slayer:CombatLoop()
     if not self.ActiveTarget then return end
 
-    local stats = self.Base.Cache.Manifest.Mobs[self.ActiveTarget]
+    -- Agent 191: Re-verify target stats exist before engaging
+    local stats = self.Base:SafeGet("Mobs", self.ActiveTarget)
+    if not stats then
+        warn("[Agent 101]: Active Target stats lost! Aborting combat.")
+        self.ActiveTarget = nil
+        return
+    end
 
-    -- Special Logic for Bosses
-    if self.ActiveTarget == "CoconutCrab" then
-        -- Execute Agent 102's Circle Strafe Logic
-        print("[Agent 102]: Initiating Circle Strafe around Coconut Field...")
-        -- In a real script: local center = Vector3.new(...)
-        -- self.Navigator:Circle(center, radius=30)
-    elseif self.ActiveTarget == "StumpSnail" then
-        -- Execute Agent 103's AFK Logic
-        print("[Agent 103]: Positioning on top of Stump Field for AFK kill...")
-        -- self.Navigator:MoveTo(Vector3.new(422.69, 105.00, -174.36))
-    else
-        -- General Mob Logic (Agent 121)
-        print("[Agent 121]: Engaging " .. self.ActiveTarget .. " with standard attacks.")
+    -- Agent 191: Wrap combat logic in pcall
+    local success, err = pcall(function()
+        -- Special Logic for Bosses
+        if self.ActiveTarget == "CoconutCrab" then
+            -- Execute Agent 102's Circle Strafe Logic
+            print("[Agent 102]: Initiating Circle Strafe around Coconut Field...")
+            -- In a real script: local center = Vector3.new(...)
+            -- self.Navigator:Circle(center, radius=30)
+        elseif self.ActiveTarget == "StumpSnail" then
+            -- Execute Agent 103's AFK Logic
+            print("[Agent 103]: Positioning on top of Stump Field for AFK kill...")
+            -- self.Navigator:MoveTo(Vector3.new(422.69, 105.00, -174.36))
+        else
+            -- General Mob Logic (Agent 121)
+            print("[Agent 121]: Engaging " .. self.ActiveTarget .. " with standard attacks.")
+        end
+    end)
+
+    if not success then
+        warn("[Agent 101]: Combat Loop Error: " .. tostring(err))
+        self.ActiveTarget = nil
     end
 end
 
