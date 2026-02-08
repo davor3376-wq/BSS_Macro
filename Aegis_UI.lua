@@ -25,11 +25,15 @@
 
     [Agent 191 - Warden]: "Also, add a debounce. If the user spams the toggle, we don't want 50 threads spawning."
     ---------------------------------------------------------------------------------------------------------
+    [AUDIT TRAIL]:
+    [v2.0 APPROVED]: "Reordered Tabs to prioritize Quests (Tab 5) per Davor's request.
+                      Added 'Safety' Tab with Anti-Ban toggle linked to Agent 181."
+    ---------------------------------------------------------------------------------------------------------
 ]]
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
-    Name = "Project Aegis | Bee Swarm Simulator | v1.0",
+    Name = "Project Aegis | Bee Swarm Simulator | v2.0",
     LoadingTitle = "Initializing Guilds...",
     LoadingSubtitle = "by Jules",
     ConfigurationSaving = {
@@ -46,6 +50,7 @@ local Navigator = require(script.Parent.Navigator).new(BaseClass)
 local Collector = require(script.Parent.Collector).new(BaseClass)
 local Slayer = require(script.Parent.Slayer).new(BaseClass)
 local QuestBot = require(script.Parent.QuestBot).new(BaseClass)
+local AntiBan = require(script.Parent.AntiBan).new(BaseClass)
 
 -- [Agent 191 Helper]: Atomic State Change with Debounce
 local function SetState(key, value, callback)
@@ -75,10 +80,8 @@ Tab1:CreateToggle({
     Callback = function(Value)
         SetState("isFarming", Value, function()
             if Value then
-                -- Start Sequence
                 Collector:StartCollection("Scooper") -- Default tool
             else
-                -- Stop Sequence
                 Collector:StopCollection()
             end
         end)
@@ -111,8 +114,6 @@ Tab2:CreateToggle({
     Callback = function(Value)
         SetState("isCombatEnabled", Value, function()
             if Value then
-                -- In a real loop, Slayer would constantly check for mobs
-                -- Here we simulate one target identification
                 local target = Slayer:IdentifyTarget("Ladybug")
                 if target then Slayer:CombatLoop() end
             end
@@ -126,47 +127,20 @@ Tab2:CreateDropdown({
     CurrentOption = "CoconutCrab",
     Flag = "BossSelect",
     Callback = function(Option)
-        -- Set active target for Slayer
         Slayer.ActiveTarget = Option[1]
     end,
 })
 
 -- =========================================================================================================
--- TAB 3: QUESTS (Guild E)
+-- TAB 3: SETTINGS (Guild A)
 -- =========================================================================================================
-local Tab3 = Window:CreateTab("Quests", 4483362458)
+local Tab3 = Window:CreateTab("Settings", 4483362458)
 
 Tab3:CreateToggle({
-    Name = "Auto Quest",
-    CurrentValue = false,
-    Flag = "AutoQuest",
-    Callback = function(Value)
-        SetState("isQuesting", Value, function()
-            if Value then
-                -- Trigger analysis
-                local dummyQuests = {"BlackBear_Quest1", "BrownBear_Quest2"}
-                local bestQuest = QuestBot:AnalyzeQuests(dummyQuests)
-                if bestQuest then
-                    -- Extract NPC from quest name for demo
-                    local npc = bestQuest:match("^(%w+)_")
-                    QuestBot:GoToNPC(npc)
-                end
-            end
-        end)
-    end,
-})
-
--- =========================================================================================================
--- TAB 4: SETTINGS (Guild A)
--- =========================================================================================================
-local Tab4 = Window:CreateTab("Settings", 4483362458)
-
-Tab4:CreateToggle({
     Name = "Mobile Optimization Mode",
     CurrentValue = BaseClass:IsMobileOptimized(),
     Flag = "MobileMode",
     Callback = function(Value)
-        -- This should update the Manifest or Cache
         if BaseClass.Cache.Manifest and BaseClass.Cache.Manifest.GameSettings then
              BaseClass.Cache.Manifest.GameSettings.MobileOptimized = Value
              print("[Agent 003]: Mobile Optimization set to " .. tostring(Value))
@@ -175,32 +149,69 @@ Tab4:CreateToggle({
 })
 
 -- =========================================================================================================
--- TAB 5: STATS (Monitoring)
+-- TAB 4: SAFETY (Guild F - Agent 181)
 -- =========================================================================================================
-local Tab5 = Window:CreateTab("Stats", 4483362458)
+local Tab4 = Window:CreateTab("Safety", 4483362458)
 
-local StatusLabel = Tab5:CreateLabel("Status: Idle")
+Tab4:CreateToggle({
+    Name = "Humanization / Anti-Ban",
+    CurrentValue = false,
+    Flag = "AntiBanToggle",
+    Callback = function(Value)
+        if Value then
+            AntiBan:StartMonitoring()
+        else
+            AntiBan:StopMonitoring()
+        end
+    end,
+})
 
--- Simple Loop to update status (Agent 191: Needs to be cleanable!)
+Tab4:CreateLabel("Status: " .. (BaseClass.State.isPaused and "PAUSED (Break Active)" or "Active"))
+
+-- =========================================================================================================
+-- TAB 5: QUESTS (Guild E) - [PRIORITY FOCUS]
+-- =========================================================================================================
+local Tab5 = Window:CreateTab("Quests", 4483362458)
+
+Tab5:CreateToggle({
+    Name = "Auto Quest (Deep Logic)",
+    CurrentValue = false,
+    Flag = "AutoQuest",
+    Callback = function(Value)
+        SetState("isQuesting", Value, function()
+            if Value then
+                -- Trigger complex quest step
+                local questData = { Type = "Collect", Field = "Rose Field", Amount = 1000, PollenType = "Red" }
+                QuestBot:ProcessQuestStep(questData)
+            end
+        end)
+    end,
+})
+
+Tab5:CreateLabel("Current Objective: Waiting...")
+
+-- =========================================================================================================
+-- TAB 6: STATS (Monitoring)
+-- =========================================================================================================
+local Tab6 = Window:CreateTab("Stats", 4483362458)
+
+local StatusLabel = Tab6:CreateLabel("Status: Idle")
+
+-- Simple Loop to update status
 task.spawn(function()
     while true do
         local status = "Idle"
-        if BaseClass.State.isFarming then status = "Farming: " .. tostring(BaseClass.State.activeField) end
-        if BaseClass.State.isConverting then status = "Converting Honey" end
-        if BaseClass.State.isCombatEnabled then status = "Combat Active" end
+        if BaseClass.State.isPaused then status = "SAFETY BREAK ACTIVE"
+        elseif BaseClass.State.isQuestTraveling then status = "Traveling to Quest Location"
+        elseif BaseClass.State.isFarming then status = "Farming: " .. tostring(BaseClass.State.activeField)
+        elseif BaseClass.State.isConverting then status = "Converting Honey"
+        elseif BaseClass.State.isCombatEnabled then status = "Combat Active" end
 
         StatusLabel:Set("Status: " .. status)
         task.wait(1)
     end
 end)
 
--- =========================================================================================================
--- TAB 6: MISC (Credits)
--- =========================================================================================================
-local Tab6 = Window:CreateTab("Misc", 4483362458)
-Tab6:CreateLabel("Project Aegis v1.0")
-Tab6:CreateLabel("Orchestrator: Jules")
-Tab6:CreateLabel("Architecture: The Hive Mind")
 
 Rayfield:LoadConfiguration()
-print("[Agent 003]: Interface Loaded. Hive Mind Active.")
+print("[Agent 003]: Interface Loaded v2.0. Hive Mind Active.")

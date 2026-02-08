@@ -66,6 +66,12 @@ function Collector:StartCollection(toolName)
         local success, err = pcall(function()
             -- Agent 141: Handshake with BaseClass State
             while self.Base.State.isFarming and not self.Base.State.isConverting do
+                -- Agent 181: Safety Pause
+                while self.Base.State.isPaused do
+                    print("[Agent 181]: Collection Paused.")
+                    task.wait(1)
+                end
+
                 -- Simulate Click
                 -- game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
 

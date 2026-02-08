@@ -57,6 +57,12 @@ end
 
 -- [JSON Ref]: BSS_Coordinates.json (Fields)
 function Navigator:MoveToField(fieldName)
+    -- Agent 181: Safety Protocol Check
+    if self.Base.State.isPaused then
+        print("[Agent 181]: Movement Paused due to Safety Event.")
+        return false
+    end
+
     -- Agent 141: Handshake - Check if busy converting
     if self.Base.State.isConverting then
         print("[Agent 021]: Pausing movement. Collector is full/converting.")
@@ -108,6 +114,11 @@ function Navigator:MoveToField(fieldName)
 
     if success then
         print("[Agent 021]: Arrived at " .. fieldName)
+        -- Agent 141: Handshake Complete
+        if self.Base.State.isQuestTraveling then
+             print("[Agent 141]: Quest Travel Complete. Handing over to Collector.")
+             self.Base.State.isQuestTraveling = false
+        end
         return true
     else
         warn("[Agent 021]: Movement Failed! Error: " .. tostring(err))

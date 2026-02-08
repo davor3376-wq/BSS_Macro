@@ -54,7 +54,9 @@ BaseClass.State = {
     isFarming = false,       -- Controlled by UI Tab 1
     isConverting = false,    -- Controlled by Collector
     isCombatEnabled = false, -- Controlled by UI Tab 2
-    isQuesting = false,      -- Controlled by UI Tab 3
+    isQuesting = false,      -- Controlled by UI Tab 5 (Updated)
+    isQuestTraveling = false,-- Handshake for QuestBot
+    isPaused = false,        -- Controlled by AntiBan (Agent 181)
     activeField = nil,       -- Current target field
     activeMob = nil,         -- Current target mob
 }

@@ -136,7 +136,47 @@ function QuestBot:GoToNPC(npcName)
     end
 
     print("[Agent 141]: Moving to " .. npcName .. " to turn in quest.")
-    -- self.Base.Navigator:MoveTo(npcPos) -- Assuming Navigator is linked or called externally
+
+    -- Agent 141: Initiate Travel
+    self.Base.State.isQuestTraveling = true
+    -- In a real scenario, Navigator would be called here via a Controller or direct link.
+    -- For simulation, we assume Navigator observes 'isQuestTraveling' or we trigger it:
+    -- Navigator:MoveToField(npcName)
+end
+
+-- [Deep Logic]: Agent 141 - Quest Step Execution
+function QuestBot:ProcessQuestStep(questData)
+    -- Input: { Type = "Collect", Field = "Rose Field", Amount = 1000, PollenType = "Red" }
+
+    if self.Base.State.isPaused then return end -- Agent 181 Handshake
+
+    print("[Agent 141]: Processing Step: Collect " .. questData.Amount .. " " .. questData.PollenType .. " in " .. questData.Field)
+
+    -- 1. Travel to Field
+    self.Base.State.isQuestTraveling = true
+    -- Trigger Navigator (Simulated call)
+    -- Navigator:MoveToField(questData.Field)
+
+    -- 2. Wait for Arrival (Handshake)
+    local maxWait = 30
+    local waited = 0
+    while self.Base.State.isQuestTraveling do
+        if self.Base.State.isPaused then
+            print("[Agent 141]: Pausing Quest Travel due to Safety Protocol.")
+        end
+        task.wait(1)
+        waited = waited + 1
+        if waited > maxWait then
+            warn("[Agent 141]: Travel timeout!")
+            break
+        end
+    end
+
+    if self.Base.State.activeField == questData.Field then
+        print("[Agent 141]: Arrived at Quest Field. Starting Collection.")
+        -- 3. Trigger Collector (Simulated call)
+        -- Collector:StartCollection("Scooper", questData.Amount)
+    end
 end
 
 return QuestBot
